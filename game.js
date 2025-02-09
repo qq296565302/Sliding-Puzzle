@@ -1,136 +1,95 @@
-const APP_WIDTH = 400;
-const APP_HEIGHT = 400;
-const TILE_SIZE = APP_WIDTH / 3;
+// 初始化游戏
+function initPuzzle() {
+    const container = document.getElementById('game-container');
+    container.innerHTML = ''; // 清空旧元素
+    const puzzleTiles = []; // 初始化拼图块数组
 
-let app = new PIXI.Application({
-    width: APP_WIDTH,
-    height: APP_HEIGHT,
-    backgroundColor: 0x1099bb,
-    antialias: true
-});
-document.getElementById('game-container').appendChild(app.view);
+    // 定义数字块
+    const numbers = [1, 2, 3, 4, 5, 6, 7, 8, 0]; // 0 表示空白块
+    numbers.sort(() => Math.random() - 0.5); // 随机打乱顺序
 
-let tiles = [];
-let emptyPosition = { x: 2, y: 2 };
-let isAnimating = false;
+    numbers.forEach((num, index) => {
+        const tile = document.createElement('div');
+        tile.className = 'tile';
+        tile.textContent = num === 0 ? '' : num; // 空白块不显示数字
 
-function createTiles() {
-    // 创建1-8数字方块
-    for (let i = 0; i < 8; i++) {
-        const tile = new PIXI.Text(i + 1, {
-            fontSize: 36,
-            fill: 0xffffff,
-            align: 'center'
+        // 基础样式配置
+        Object.assign(tile.style, {
+            width: '100px',
+            height: '100px',
+            border: '2px solid #333',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '24px',
+            cursor: 'pointer',
+            background: num ? '#f0f0f0' : 'transparent',
+            position: 'absolute',
+            transition: 'transform 0.3s ease'
         });
-        
-        tile.x = (i % 3) * TILE_SIZE + TILE_SIZE/2;
-        tile.y = Math.floor(i / 3) * TILE_SIZE + TILE_SIZE/2;
-        tile.anchor.set(0.5);
-        tile.interactive = true;
-        tile.buttonMode = true;
-        tile.originalX = (i % 3) * TILE_SIZE + TILE_SIZE/2;
-        tile.originalY = Math.floor(i / 3) * TILE_SIZE + TILE_SIZE/2;
-        
-        tile.on('pointerdown', () => {
-            if (isAnimating || !isValidMove(tile)) return;
-            
-            // 立即锁定空白格位置
-            const tempEmpty = { ...emptyPosition };
-            emptyPosition = { x: -1, y: -1 }; // 临时无效位置
-            
-            isAnimating = true;
-            const targetX = tempEmpty.x * TILE_SIZE + TILE_SIZE/2;
-            const targetY = tempEmpty.y * TILE_SIZE + TILE_SIZE/2;
-            
-            const animate = (delta) => {
-                tile.x += (targetX - tile.x) * 0.2 * delta;
-                tile.y += (targetY - tile.y) * 0.2 * delta;
-                
-                // 实时检测碰撞
-                tiles.forEach(otherTile => {
-                    if (otherTile !== tile && 
-                        Math.abs(otherTile.x - tile.x) < TILE_SIZE/2 &&
-                        Math.abs(otherTile.y - tile.y) < TILE_SIZE/2) {
-                        // 强制分离重叠方块
-                        otherTile.x = otherTile.originalX;
-                        otherTile.y = otherTile.originalY;
-                    }
-                });
-                
-                if (Math.abs(tile.x - targetX) < 1 && Math.abs(tile.y - targetY) < 1) {
-                    tile.x = targetX;
-                    tile.y = targetY;
-                    isAnimating = false;
-                    app.ticker.remove(animate);
-                    
-                    // 原子更新位置
-                    emptyPosition = {
-                        x: Math.floor(tile.originalX / TILE_SIZE),
-                        y: Math.floor(tile.originalY / TILE_SIZE)
-                    };
-                    tile.originalX = targetX;
-                    tile.originalY = targetY;
-                    checkWin();
-                }
-            };
-            app.ticker.add(animate);
-        });
-        
-        app.stage.addChild(tile);
-        tiles.push(tile);
-    }
-}
 
-function createGrid() {
-    const graphics = new PIXI.Graphics();
-    graphics.lineStyle(2, 0xffffff, 0.5);
-    
-    for (let i = 1; i < 3; i++) {
-        // 垂直线
-        graphics.moveTo(i * TILE_SIZE, 0);
-        graphics.lineTo(i * TILE_SIZE, APP_HEIGHT);
-        // 水平线
-        graphics.moveTo(0, i * TILE_SIZE);
-        graphics.lineTo(APP_WIDTH, i * TILE_SIZE);
-    }
-    app.stage.addChild(graphics);
-}
+        // 初始化位置
+        const col = index % 3;
+        const row = Math.floor(index / 3);
+        tile.style.transform = `translate(${col * 100}%, ${row * 100}%)`;
 
-function isValidMove(tile) {
-    const tileX = Math.floor(tile.x / TILE_SIZE);
-    const tileY = Math.floor(tile.y / TILE_SIZE);
-    return (
-        (Math.abs(tileX - emptyPosition.x) === 1 && tileY === emptyPosition.y) ||
-        (Math.abs(tileY - emptyPosition.y) === 1 && tileX === emptyPosition.x)
-    );
-}
-
-function checkWin() {
-    const isCorrect = tiles.every((tile, index) => {
-        const x = Math.floor(tile.x / TILE_SIZE);
-        const y = Math.floor(tile.y / TILE_SIZE);
-        return x === index % 3 && y === Math.floor(index / 3);
+        tile.addEventListener('click', () => handleTileClick(index, puzzleTiles));
+        container.appendChild(tile);
+        puzzleTiles.push(tile);
     });
-    if (isCorrect) {
-        alert('恭喜！你赢了！');
+}
+
+// 处理拼图块点击事件
+function handleTileClick(clickedIndex, puzzleTiles) {
+    const emptyIndex = puzzleTiles.findIndex(tile => tile.textContent === '');
+    console.log('点击位置:', clickedIndex, '空白位置:', emptyIndex);
+
+    if (isAdjacent(clickedIndex, emptyIndex)) {
+        console.log('允许移动：交换位置', clickedIndex, '和', emptyIndex);
+
+        // 交换数值数组
+        [puzzleTiles[clickedIndex].textContent, puzzleTiles[emptyIndex].textContent] = 
+        [puzzleTiles[emptyIndex].textContent, puzzleTiles[clickedIndex].textContent];
+
+        updatePuzzleDisplay(puzzleTiles);
+        checkWinCondition(puzzleTiles);
+    } else {
+        console.log('拒绝移动：非相邻位置');
     }
 }
 
-function shuffleTiles() {
-    // Fisher-Yates洗牌算法
-    for (let i = tiles.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [tiles[i].x, tiles[j].x] = [tiles[j].x, tiles[i].x];
-        [tiles[i].y, tiles[j].y] = [tiles[j].y, tiles[i].y];
-    }
-    
-    // 更新空白格位置
-    emptyPosition = { x: 2, y: 2 };
-    
-    // 确保谜题可解（偶数逆序数）
-    // 这里需要添加逆序数校验逻辑
+// 判断两个块是否相邻
+function isAdjacent(a, b) {
+    const rowA = Math.floor(a / 3);
+    const colA = a % 3;
+    const rowB = Math.floor(b / 3);
+    const colB = b % 3;
+
+    // 检查是否水平相邻或垂直相邻
+    return (rowA === rowB && Math.abs(colA - colB) === 1) || 
+           (colA === colB && Math.abs(rowA - rowB) === 1);
 }
 
-createTiles();
-createGrid();
-shuffleTiles();
+// 更新拼图显示
+function updatePuzzleDisplay(puzzleTiles) {
+    puzzleTiles.forEach((tile, index) => {
+        const col = index % 3;
+        const row = Math.floor(index / 3);
+        tile.style.transform = `translate(${col * 100}%, ${row * 100}%)`;
+    });
+}
+
+// 检查游戏胜利条件
+function checkWinCondition(puzzleTiles) {
+    const isWin = puzzleTiles.every((tile, index) => {
+        const num = tile.textContent === '' ? 0 : parseInt(tile.textContent);
+        return num === index + 1 || (index === 8 && num === 0);
+    });
+
+    if (isWin) {
+        alert('恭喜，你赢了！');
+    }
+}
+
+// 初始化游戏
+initPuzzle();
