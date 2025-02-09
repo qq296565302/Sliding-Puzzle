@@ -37,6 +37,15 @@ function initPuzzle() {
         container.appendChild(tile);
         puzzleTiles.push(tile);
     });
+
+    // 绑定求解按钮事件
+    const solveButton = document.createElement('button');
+    solveButton.id = 'solve-btn';
+    solveButton.textContent = '显示解决方案';
+    document.body.appendChild(solveButton);
+    solveButton.addEventListener('click', () => showSolution(puzzleTiles));
+
+    return puzzleTiles;
 }
 
 // 处理拼图块点击事件
@@ -91,5 +100,71 @@ function checkWinCondition(puzzleTiles) {
     }
 }
 
+// 计算从当前状态到目标状态的解决方案
+function findSolution(puzzleTiles) {
+    // 定义目标状态，表示拼图的完成状态
+    const targetState = [1, 2, 3, 4, 5, 6, 7, 8, 0];
+    // 获取当前拼图的初始状态，将空白块表示为0
+    const startState = puzzleTiles.map(tile => tile.textContent === '' ? 0 : parseInt(tile.textContent));
+    // 初始化搜索队列，包含初始状态和路径
+    const queue = [{ state: startState, path: [] }];
+    // 使用集合记录已访问的状态，避免重复计算
+    const visited = new Set();
+
+    // 开始广度优先搜索
+    while (queue.length > 0) {
+        // 从队列中取出第一个状态进行处理
+        const { state, path } = queue.shift();
+        // 找到空白块在当前状态中的索引
+        const emptyIndex = state.indexOf(0);
+
+        // 检查当前状态是否为目标状态
+        if (state.toString() === targetState.toString()) {
+            // 如果是目标状态，返回路径，表示找到解决方案
+            return path;
+        }
+
+        // 初始化可能的移动方向数组
+        const possibleMoves = [];
+        // 检查空白块是否可以向左移动
+        if (emptyIndex % 3 !== 0) possibleMoves.push(emptyIndex - 1); // 左
+        // 检查空白块是否可以向右移动
+        if (emptyIndex % 3 !== 2) possibleMoves.push(emptyIndex + 1); // 右
+        // 检查空白块是否可以向上移动
+        if (emptyIndex > 2) possibleMoves.push(emptyIndex - 3); // 上
+        // 检查空白块是否可以向下移动
+        if (emptyIndex < 6) possibleMoves.push(emptyIndex + 3); // 下
+
+        // 遍历每个可能的移动方向
+        for (const move of possibleMoves) {
+            // 生成新的状态，通过交换空白块和目标块
+            const newState = [...state];
+            [newState[emptyIndex], newState[move]] = [newState[move], newState[emptyIndex]];
+            // 将新状态转换为字符串形式，便于记录
+            const newStateStr = newState.toString();
+
+            // 检查新状态是否已被访问过
+            if (!visited.has(newStateStr)) {
+                // 如果未访问过，将其加入访问记录
+                visited.add(newStateStr);
+                // 将新状态和路径加入队列，以便后续处理
+                queue.push({ state: newState, path: [...path, move] });
+            }
+        }
+    }
+
+    // 如果搜索完成仍未找到目标状态，返回null表示无解
+    return null;
+}
+
+function showSolution(puzzleTiles) {
+    const solution = findSolution(puzzleTiles);
+    if (solution) {
+        alert(`解决方案路径: ${solution.map(index => puzzleTiles[index].textContent).join(' -> ')}`);
+    } else {
+        alert('无解');
+    }
+}
+
 // 初始化游戏
-initPuzzle();
+const puzzleTiles = initPuzzle();
