@@ -96,7 +96,9 @@ function checkWinCondition(puzzleTiles) {
     });
 
     if (isWin) {
-        alert('恭喜，你赢了！');
+        setTimeout(() => {
+            alert('恭喜，你赢了！');
+        }, 100); // 延迟 100 毫秒
     }
 }
 
